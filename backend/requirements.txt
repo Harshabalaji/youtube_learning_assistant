@@ -1,0 +1,53 @@
+# FastAPI & Server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database
+sqlalchemy==2.0.36
+alembic==1.14.1
+aiosqlite==0.20.0
+
+# AI / LLM
+langchain==0.3.14
+langchain-openai==0.3.0
+langchain-google-genai==2.0.8
+langchain-community==0.3.14
+langchain-text-splitters==0.3.4
+openai==1.59.4
+google-generativeai==0.8.4
+sentence-transformers==3.3.1
+
+# Vector Database
+chromadb==0.5.23
+
+# YouTube
+youtube-transcript-api==1.2.4
+yt-dlp==2024.12.23
+pytube==15.0.0
+
+# Whisper (fallback)
+openai-whisper==20240930
+
+# Document Export
+reportlab==4.2.5
+python-docx==1.1.2
+markdown==3.7
+
+# Utilities
+httpx==0.28.1
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
+loguru==0.7.3
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1

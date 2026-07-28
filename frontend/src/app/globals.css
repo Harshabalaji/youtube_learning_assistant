@@ -1,0 +1,187 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 262 83% 58%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 7%;
+    --card-foreground: 213 31% 91%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 16% 57%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 263 70% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-white/80 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl shadow-lg;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500;
+  }
+
+  /* Animated gradient background */
+  .gradient-bg {
+    background: linear-gradient(
+      135deg,
+      hsl(262, 83%, 58%) 0%,
+      hsl(280, 80%, 50%) 50%,
+      hsl(320, 70%, 55%) 100%
+    );
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded;
+  }
+
+  /* Floating animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Pulse glow for active elements */
+  .glow {
+    @apply animate-pulse-glow;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* Flashcard flip */
+  .flashcard-container {
+    perspective: 1000px;
+  }
+  .flashcard-inner {
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+  }
+  .flashcard-inner.flipped {
+    transform: rotateY(180deg);
+  }
+  .flashcard-front,
+  .flashcard-back {
+    backface-visibility: hidden;
+  }
+  .flashcard-back {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Mermaid diagram styling */
+.mermaid {
+  @apply flex justify-center;
+}
+
+/* Markdown content styling */
+.prose-custom h1 {
+  @apply text-2xl font-bold mb-4 mt-6;
+}
+.prose-custom h2 {
+  @apply text-xl font-semibold mb-3 mt-5;
+}
+.prose-custom h3 {
+  @apply text-lg font-medium mb-2 mt-4;
+}
+.prose-custom p {
+  @apply mb-3 leading-relaxed;
+}
+.prose-custom ul {
+  @apply list-disc pl-6 mb-3 space-y-1;
+}
+.prose-custom ol {
+  @apply list-decimal pl-6 mb-3 space-y-1;
+}
+.prose-custom blockquote {
+  @apply border-l-4 border-primary/50 pl-4 py-1 my-3 italic text-muted-foreground;
+}
+.prose-custom code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+}
+.prose-custom pre {
+  @apply bg-muted p-4 rounded-lg overflow-x-auto my-3;
+}
+.prose-custom pre code {
+  @apply bg-transparent p-0;
+}
+.prose-custom strong {
+  @apply font-semibold;
+}
+.prose-custom a {
+  @apply text-primary underline underline-offset-2;
+}
