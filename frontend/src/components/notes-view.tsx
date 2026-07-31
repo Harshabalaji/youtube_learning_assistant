@@ -26,7 +26,7 @@ export function NotesView({ notes }: NotesViewProps) {
           )
           .join("\n\n")
       : "") ||
-    notes?.summary ||
+    (notes as any)?.summary ||
     "";
 
   const handleCopy = () => {

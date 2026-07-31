@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 # Default models for each provider
 DEFAULT_MODELS = {
     "openai": "gpt-4o-mini",
-    "google": "gemini-1.5-flash",
+    "google": "gemini-2.5-flash",
     "ollama": "llama3",
 }
 
@@ -63,12 +63,12 @@ def get_llm_provider(
                 provider = "ollama"
 
     if provider == "openai":
-        model = model if (model and model != "gpt-4.1") else DEFAULT_MODELS["openai"]
+        model = model or DEFAULT_MODELS["openai"]
         logger.info("Creating OpenAI provider with model: {}", model)
         return OpenAIProvider(model=model, temperature=temperature)
 
     elif provider == "google":
-        model = model if (model and model != "gemini-2.5-flash") else DEFAULT_MODELS["google"]
+        model = model or DEFAULT_MODELS["google"]
         logger.info("Creating Gemini provider with model: {}", model)
         return GeminiProvider(model=model, temperature=temperature)
 
@@ -93,18 +93,21 @@ def get_available_providers() -> dict:
     providers = {}
 
     providers["google"] = {
+        "name": "Gemini",
         "available": _is_valid_key(settings.GOOGLE_API_KEY),
-        "models": ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"],
+        "models": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"],
         "default_model": DEFAULT_MODELS["google"],
     }
 
     providers["openai"] = {
+        "name": "OpenAI",
         "available": _is_valid_key(settings.OPENAI_API_KEY),
         "models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
         "default_model": DEFAULT_MODELS["openai"],
     }
 
     providers["ollama"] = {
+        "name": "Ollama (Local)",
         "available": True,  # Always potentially available
         "models": settings.ollama_models_list,
         "default_model": DEFAULT_MODELS["ollama"],

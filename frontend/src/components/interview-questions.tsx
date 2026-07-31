@@ -123,7 +123,7 @@ export function InterviewQuestions({ interview }: InterviewQuestionsProps) {
                     <span className="font-bold text-xs uppercase tracking-wider text-primary block mb-1">
                       Suggested Answer:
                     </span>
-                    {q.suggested_answer || q.answer}
+                    {q.suggested_answer || (q as any).answer}
                   </div>
                 )}
               </CardContent>

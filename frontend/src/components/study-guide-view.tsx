@@ -71,7 +71,7 @@ export function StudyGuideView({ studyGuide }: StudyGuideViewProps) {
                     Key Concepts to Master:
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {section.key_concepts.map((concept, cIdx) => (
+                    {section.key_concepts.map((concept: string, cIdx: number) => (
                       <Badge key={cIdx} variant="secondary" className="text-xs">
                         {concept}
                       </Badge>
@@ -87,7 +87,7 @@ export function StudyGuideView({ studyGuide }: StudyGuideViewProps) {
                     Section Self-Check Questions:
                   </span>
                   <ul className="space-y-1.5 pl-4 list-disc text-xs text-foreground/90">
-                    {section.review_questions.map((q, qIdx) => (
+                    {section.review_questions.map((q: string, qIdx: number) => (
                       <li key={qIdx}>{q}</li>
                     ))}
                   </ul>

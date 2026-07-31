@@ -92,7 +92,10 @@ async def analyze_video(
         )
         db.add(video)
 
-    await db.flush()
+    # Commit immediately so the row is persisted and the write lock is
+    # released BEFORE any slow network/AI work begins.
+    await db.commit()
+    await db.refresh(video)
 
     try:
         # Step 2: Fetch metadata
@@ -105,7 +108,9 @@ async def analyze_video(
         video.description = metadata.get("description")
         video.view_count = metadata.get("view_count")
         video.publish_date = metadata.get("publish_date")
-        await db.flush()
+        # Commit metadata immediately — releases write lock before transcript fetch
+        await db.commit()
+        await db.refresh(video)
 
         # Step 3: Fetch transcript
         logger.info("Fetching transcript for video: {}", video_id)
@@ -162,15 +167,24 @@ async def analyze_video(
         video.reading_time_minutes = processed["reading_time_minutes"]
         video.reading_level = estimate_reading_level(processed["cleaned_text"])
         video.detected_language = transcript_data.get("language", "en")
-        await db.flush()
+        # Commit transcript + metadata — releases write lock before AI pipeline
+        await db.commit()
+        await db.refresh(video)
 
-        # Step 5: Chunk and embed
-        logger.info("Chunking and embedding transcript")
-        chunks, metadatas = chunk_with_metadata(
-            processed["cleaned_text"],
-            video_id,
-        )
-        store_chunks(video_id, chunks, metadatas)
+        # Step 5: Chunk and embed (non-blocking — don't fail the pipeline if embedding fails)
+        try:
+            logger.info("Chunking and embedding transcript")
+            chunks, metadatas = chunk_with_metadata(
+                processed["cleaned_text"],
+                video_id,
+            )
+            store_chunks(video_id, chunks, metadatas)
+        except Exception as embed_err:
+            logger.warning(
+                "Embedding step failed for {} (will continue without RAG): {}",
+                video_id,
+                str(embed_err),
+            )
 
         # Step 6: Run AI pipeline
         logger.info("Running AI generation pipeline")

@@ -97,12 +97,16 @@ class GeminiProvider(BaseLLMProvider):
 
     def __init__(self, model: str = "gemini-2.5-flash", temperature: float = 0.3):
         super().__init__(model, temperature)
-        import google.generativeai as genai
+        try:
+            import google.generativeai as genai
 
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.genai = genai
-        self.gen_model = genai.GenerativeModel(model)
-        logger.info("Initialized Gemini provider with model: {}", model)
+            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            self.genai = genai
+            self.gen_model = genai.GenerativeModel(model)
+            logger.info("Initialized Gemini provider with model: {}", model)
+        except Exception as e:
+            logger.error("Failed to initialize Gemini provider: {}", str(e))
+            raise ValueError(f"Gemini initialization failed: {str(e)}")
 
     async def generate(self, messages: list[dict], json_mode: bool = True) -> str:
         """Generate a response using Gemini."""
@@ -120,18 +124,30 @@ class GeminiProvider(BaseLLMProvider):
 
         combined_prompt = "\n".join(prompt_parts)
 
-        generation_config = self.genai.GenerationConfig(
-            temperature=self.temperature,
-            max_output_tokens=8000,
-        )
-        if json_mode:
-            generation_config.response_mime_type = "application/json"
+        try:
+            generation_config = self.genai.GenerationConfig(
+                temperature=self.temperature,
+                max_output_tokens=8000,
+            )
+            if json_mode:
+                generation_config.response_mime_type = "application/json"
 
-        response = await self.gen_model.generate_content_async(
-            combined_prompt,
-            generation_config=generation_config,
-        )
-        return response.text
+            response = await self.gen_model.generate_content_async(
+                combined_prompt,
+                generation_config=generation_config,
+            )
+
+            # Handle blocked or empty responses
+            if not response or not response.text:
+                logger.warning("Gemini returned empty response")
+                raise ValueError("Gemini returned an empty response. The content may have been blocked by safety filters.")
+
+            return response.text
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("Gemini generation error: {} ({})", type(e).__name__, str(e))
+            raise ValueError(f"Gemini API error: {str(e)}")
 
     async def generate_stream(
         self, messages: list[dict]

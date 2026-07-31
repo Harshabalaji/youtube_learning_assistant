@@ -133,10 +133,14 @@ async def run_full_pipeline(
     provider: str = None,
     model: str = None,
     content_types: list[str] = None,
-    max_concurrent: int = 3,
+    max_concurrent: int = 1,
+    inter_request_delay: float = 2.0,
 ) -> dict[str, dict]:
     """
     Run the full AI generation pipeline for all content types.
+
+    Runs sequentially with delays between calls to respect API rate limits
+    (e.g. Gemini free tier: 5 requests/minute).
 
     Args:
         transcript: The cleaned transcript text.
@@ -146,6 +150,7 @@ async def run_full_pipeline(
         content_types: Optional list of specific content types to generate.
                        If None, generates all types.
         max_concurrent: Maximum number of concurrent LLM calls.
+        inter_request_delay: Seconds to wait between LLM calls (rate limiting).
 
     Returns:
         Dict mapping content type names to their generated content.
@@ -163,25 +168,16 @@ async def run_full_pipeline(
     )
 
     results = {}
-    semaphore = asyncio.Semaphore(max_concurrent)
 
-    async def _generate_with_semaphore(content_type: str):
-        async with semaphore:
-            return await generate_single_content(llm, content_type, transcript, title)
-
-    # Run all generators concurrently with semaphore limiting
-    tasks = [
-        _generate_with_semaphore(ct)
-        for ct in types_to_generate
-    ]
-    completed = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for result in completed:
-        if isinstance(result, Exception):
-            logger.error("Pipeline task exception: {}", str(result))
-            continue
+    # Run sequentially with delay to respect rate limits
+    for i, content_type in enumerate(types_to_generate):
+        result = await generate_single_content(llm, content_type, transcript, title)
         if isinstance(result, dict):
             results[result["content_type"]] = result
+
+        # Add delay between requests to avoid rate limiting (skip after last)
+        if i < len(types_to_generate) - 1 and inter_request_delay > 0:
+            await asyncio.sleep(inter_request_delay)
 
     successful = sum(1 for r in results.values() if r.get("success"))
     total = len(results)

@@ -20,8 +20,18 @@ const api = axios.create({
   },
 });
 
+// Direct backend client — bypasses Next.js proxy for long-running requests
+// The Next.js rewrite proxy has a short internal timeout that causes ECONNRESET
+const directApi = axios.create({
+  baseURL: "http://localhost:8000/api",
+  timeout: 600000, // 10 minutes for analysis
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Add auth token to requests if available
-api.interceptors.request.use((config) => {
+const addAuthToken = (config: any) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("auth_token");
     if (token) {
@@ -29,12 +39,16 @@ api.interceptors.request.use((config) => {
     }
   }
   return config;
-});
+};
+
+api.interceptors.request.use(addAuthToken);
+directApi.interceptors.request.use(addAuthToken);
 
 // ── Analysis ────────────────────────────────────────────────────
 
 export async function analyzeVideo(data: AnalyzeRequest) {
-  const response = await api.post<ApiResponse<any>>("/analyze", data);
+  // Use direct backend connection to avoid Next.js proxy timeout
+  const response = await directApi.post<ApiResponse<any>>("/analyze", data);
   return response.data;
 }
 

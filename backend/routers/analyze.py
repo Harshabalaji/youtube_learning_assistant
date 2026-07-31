@@ -2,6 +2,7 @@
 Analysis router — handles video analysis requests.
 """
 
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,13 +14,31 @@ from services.analysis import analyze_video, get_video_content
 from utils.youtube_helpers import extract_video_id
 from models.video import Video
 from sqlalchemy import select
+from database.session import async_session_factory
 
 logger = get_logger(__name__)
 
 router = APIRouter()
 
-# In-memory progress tracking for background tasks
-_analysis_progress: dict[str, dict] = {}
+
+async def _run_analysis_background(
+    url: str,
+    user_id: int | None,
+    llm_provider: str | None,
+    model: str | None,
+):
+    """Run the full analysis pipeline in a background task with its own session."""
+    async with async_session_factory() as db:
+        try:
+            await analyze_video(
+                url=url,
+                db=db,
+                user_id=user_id,
+                llm_provider=llm_provider,
+                model=model,
+            )
+        except Exception as exc:
+            logger.error("Background analysis failed for {}: {}", url, str(exc))
 
 
 @router.post("/analyze")
@@ -30,17 +49,39 @@ async def start_analysis(
     user: TokenData = Depends(get_current_user_optional),
 ):
     """
-    Start video analysis. Runs the full AI pipeline.
+    Start video analysis in the background.
 
-    This endpoint processes the video synchronously for simplicity.
-    For very long videos, consider using a task queue.
+    Returns immediately with { status: "processing" } so the browser is
+    never blocked.  Poll GET /api/analyze/{video_id}/status to track progress.
     """
     try:
+        video_id = extract_video_id(request.url)
+        if not video_id:
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+
         user_id = user.user_id if user else None
 
-        result = await analyze_video(
+        # Check if already completed with valid content
+        existing = await db.execute(
+            select(Video).where(Video.video_id == video_id)
+        )
+        existing_video = existing.scalar_one_or_none()
+
+        if existing_video and existing_video.status == "completed":
+            return {
+                "success": True,
+                "data": {
+                    "video_id": video_id,
+                    "db_id": existing_video.id,
+                    "status": "completed",
+                    "message": "Video already analyzed",
+                },
+            }
+
+        # Queue the analysis as a background task so we return instantly
+        background_tasks.add_task(
+            _run_analysis_background,
             url=request.url,
-            db=db,
             user_id=user_id,
             llm_provider=request.llm_provider,
             model=request.model,
@@ -48,14 +89,20 @@ async def start_analysis(
 
         return {
             "success": True,
-            "data": result,
+            "data": {
+                "video_id": video_id,
+                "status": "processing",
+                "message": "Analysis started. Poll /api/analyze/{video_id}/status for progress.",
+            },
         }
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error("Analysis failed: {}", str(e))
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error("Failed to queue analysis: {}", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to start analysis: {str(e)}")
 
 
 @router.get("/analyze/{video_id}/status")
@@ -63,14 +110,18 @@ async def get_analysis_status(
     video_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get the status of a video analysis."""
+    """
+    Poll the status of a video analysis.
+    Returns one of: processing | completed | failed | not_found
+    """
     result = await db.execute(
         select(Video).where(Video.video_id == video_id)
     )
     video = result.scalar_one_or_none()
 
     if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
+        # Not yet in DB — still being inserted by the background task
+        return {"video_id": video_id, "status": "processing", "error_message": None}
 
     return AnalysisStatusResponse(
         video_id=video_id,
