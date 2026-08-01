@@ -46,6 +46,15 @@ async def lifespan(app: FastAPI):
 
 
 # ── FastAPI Application ─────────────────────────────────────────
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def home():
+    return {
+        "message": "YouTube Learning Assistant API is running successfully!"
+    }
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
